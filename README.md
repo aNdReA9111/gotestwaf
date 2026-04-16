@@ -7,6 +7,7 @@ It was designed to evaluate web application security solutions, such as API secu
 IPS, API gateways, and others.
 
 ---
+
 * [How it works](#how-it-works)
 * [Requirements](#requirements)
 * [Quick start with Docker](#quick-start-with-docker)
@@ -15,6 +16,7 @@ IPS, API gateways, and others.
 * [Other options to run GoTestWAF](#other-options-to-run-gotestwaf)
 * [Configuration options](#configuration-options)
 * [Running with OWASP Core Rule Set regression testing suite](#running-with-owasp-core-rule-set-regression-testing-suite)
+
 ---
 
 ## How it works
@@ -34,81 +36,78 @@ payload:
 encoder:
   - Base64Flat
   - URL
-placeholder:
-  - UrlPath
-  - UrlParam
   - JSUnicode
+placeholder:
+  - URLPath
+  - URLParam
   - Header
 type: SQL Injection
 ```
 
-* `payload` is a malicious attack sample (e.g XSS payload like ```<script>alert(111)</script>``` or something more sophisticated).
-Since the format of the YAML string is required for payloads, they must be [encoded as binary data](https://yaml.org/type/binary.html).
-
+* `payload` is a malicious attack sample (e.g XSS payload like ``<script>alert(111)</script>`` or something more sophisticated).
+  Since the format of the YAML string is required for payloads, they must be [encoded as binary data](https://yaml.org/type/binary.html).
 * `encoder` is an encoder to be applied to the payload before placing it to the HTTP request. Possible encoders are:
 
-    * Base64
-    * Base64Flat
-    * JSUnicode
-    * URL
-    * Plain (to keep the payload string as-is)
-    * XML Entity
-
+  * Base64
+  * Base64Flat
+  * JSUnicode
+  * URL
+  * Plain (to keep the payload string as-is)
+  * XML Entity
 * `placeholder` is a place inside HTTP request where encoded payload should be. Possible placeholders are:
 
-    * gRPC
-    * Header
-    * UserAgent
-    * RequestBody
-    * JSONRequest
-    * JSONBody
-    * HTMLForm
-    * HTMLMultipartForm
-    * SOAPBody
-    * XMLBody
-    * URLParam
-    * URLPath
-    * RawRequest
+  * gRPC
+  * Header
+  * UserAgent
+  * RequestBody
+  * JSONRequest
+  * JSONBody
+  * HTMLForm
+  * HTMLMultipartForm
+  * SOAPBody
+  * XMLBody
+  * URLParam
+  * URLPath
+  * RawRequest
 
-    The `RawRequest` placeholder will allow you to do an arbitrary HTTP request. The payload is substituted by replacing the string `{{payload}}` in the URL path, Headers or body. Fields of `RawRequest` placeholder:
+  The `RawRequest` placeholder will allow you to do an arbitrary HTTP request. The payload is substituted by replacing the string `{{payload}}` in the URL path, Headers or body. Fields of `RawRequest` placeholder:
 
-    * `method`
-    * `path`
-    * `headers`
-    * `body`
+  * `method`
+  * `path`
+  * `headers`
+  * `body`
 
-    Required fields for `RawRequest` placeholder:
-    
-    * `method` field
+  Required fields for `RawRequest` placeholder:
 
-    Example:
-    
-    ```yaml
-    payload:
-      - test
-    encoder:
-      - Plain
-    placeholder:
-      - RawRequest:
-          method: "POST"
-          path: "/"
-          headers:
-            Content-Type: "multipart/form-data; boundary=boundary"
-          body: |
-            --boundary
-            Content-disposition: form-data; name="field1"
-            
-            Test
-            --boundary
-            Content-disposition: form-data; name="field2"
-            Content-Type: text/plain; charset=utf-7
-            
-            Knock knock.
-            {{payload}}
-            --boundary--
-    type: RawRequest test
-    ```
+  * `method` field
 
+  Example:
+
+  ```yaml
+  payload:
+    - test
+  encoder:
+    - Plain
+  placeholder:
+    - RawRequest:
+        method: "POST"
+        path: "/"
+        headers:
+          Content-Type: "multipart/form-data; boundary=boundary"
+        body: |
+          --boundary
+          Content-disposition: form-data; name="field1"
+
+          Test
+          --boundary
+          Content-disposition: form-data; name="field2"
+          Content-Type: text/plain; charset=utf-7
+
+          Knock knock.
+          {{payload}}
+          --boundary--
+  type: RawRequest test
+  ```
 * `type` is a name of entire group of the payloads in file. It can be arbitrary, but should reflect the type of attacks in the file.
 
 Request generation is a three-step process involving the multiplication of payload amount by encoder and placeholder amounts.
@@ -121,50 +120,48 @@ or your own (by using the [configuration option](#configuration-options) `testCa
 ## Requirements
 
 * GoTestwaf supports all the popular operating systems (Linux, Windows, macOS), and can be built natively
-if [Go](https://golang.org/doc/install) is installed in the system. If you want to run GoTestWaf natively,
-make sure you have the Chrome web browser to be able to generate PDF reports. In case you don't have Chrome,
-you can create a report in HTML format.
+  if [Go](https://golang.org/doc/install) is installed in the system. If you want to run GoTestWaf natively,
+  make sure you have the Chrome web browser to be able to generate PDF reports. In case you don't have Chrome,
+  you can create a report in HTML format.
 * If running GoTestWAF as the Docker container, please ensure you have [installed and configured Docker](https://docs.docker.com/get-docker/),
-and GoTestWAF and evaluated application security solution are connected to the same [Docker network](https://docs.docker.com/network/).
+  and GoTestWAF and evaluated application security solution are connected to the same [Docker network](https://docs.docker.com/network/).
 * For GoTestWAF to be successfully started, please ensure the IP address of the machine running GoTestWAF is whitelisted
-on the machine running the application security solution.
+  on the machine running the application security solution.
 
 ## Quick start with Docker
 
 The steps below walk through downloading and starting GoTestWAF with minimal configuration on Docker.
 
-1.  Pull the [GoTestWAF image](https://hub.docker.com/r/wallarm/gotestwaf) from Docker Hub:
+1. Pull the [GoTestWAF image](https://hub.docker.com/r/wallarm/gotestwaf) from Docker Hub:
 
-    ```
-    docker pull wallarm/gotestwaf
-    ```
+   ```
+   docker pull wallarm/gotestwaf
+   ```
+2. Start the GoTestWAF image:
 
-2.  Start the GoTestWAF image:
+   ```sh
+   docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
+       wallarm/gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL>
+   ```
 
-    ```sh
-    docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
-        wallarm/gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL>
-    ```
+   If required, you can replace `${PWD}/reports` with the path to another folder used to place the evaluation report.
 
-    If required, you can replace `${PWD}/reports` with the path to another folder used to place the evaluation report.
+   If you don't want to optionally email the report, just press Enter after the email request message appears, or you can use --noEmailReport to skip the message:
 
-    If you don't want to optionally email the report, just press Enter after the email request message appears, or you can use --noEmailReport to skip the message:
+   ```sh
+   docker run --rm --network="host" -v ${PWD}/reports:/app/reports \
+       wallarm/gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL> --noEmailReport
+   ```
 
-    ```sh
-    docker run --rm --network="host" -v ${PWD}/reports:/app/reports \
-        wallarm/gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL> --noEmailReport
-    ```
+   If the evaluated security tool is available externally, you can skip the option `--network="host"`. This option enables interaction of Docker containers running on 127.0.0.1.
 
-    If the evaluated security tool is available externally, you can skip the option `--network="host"`. This option enables interaction of Docker containers running on 127.0.0.1.
+   To perform the gRPC tests you must have a working endpoint and use the --grpcPort `<port>` cli option.
 
-    To perform the gRPC tests you must have a working endpoint and use the --grpcPort <port> cli option.
-
-    ```sh
-    docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
-        wallarm/gotestwaf --grpcPort 9000 --url=http://my.grpc.endpoint
-    ```
-
-3.  Check your email for the report.
+   ```sh
+   docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
+       wallarm/gotestwaf --grpcPort 9000 --url=http://my.grpc.endpoint
+   ```
+3. Check your email for the report.
 
 You have successfully evaluated your application security solution by using GoTestWAF with minimal configuration.
 To learn advanced configuration options, please use this [link](#configuration-options).
@@ -175,11 +172,11 @@ Check the evaluation results logged using the `STDOUT` and `STDERR` services. Fo
 
 ```
 INFO[0000] GoTestWAF started                             version=v0.5.6-7-g48e6959
-INFO[0000] Test cases loading started                   
-INFO[0000] Test cases loading finished                  
+INFO[0000] Test cases loading started                 
+INFO[0000] Test cases loading finished                
 INFO[0000] Test cases fingerprint                        fp=c6d14d6138601d19d215bb97806bcda3
-INFO[0000] Try to identify WAF solution                 
-INFO[0000] WAF was not identified                       
+INFO[0000] Try to identify WAF solution               
+INFO[0000] WAF was not identified                     
 INFO[0000] gohttp is used as an HTTP client to make requests  http_client=gohttp
 INFO[0000] WAF pre-check                                 url="http://host.docker.internal:8080"
 INFO[0000] WAF pre-check                                 blocked=true code=403 status=done
@@ -188,7 +185,7 @@ INFO[0000] gRPC pre-check                                connection="not availab
 INFO[0000] GraphQL pre-check                             status=started
 INFO[0000] GraphQL pre-check                             connection="not available" status=done
 INFO[0000] Scanning started                              url="http://host.docker.internal:8080"
-INFO[0005] Scanning finished                             duration=5.422700876s                                                                            
+INFO[0005] Scanning finished                             duration=5.422700876s                                                                          
 True-Positive Tests:
 ┌────────────┬───────────────────────────┬──────────────────────┬─────────────────────┬──────────────────────┬────────────────────┬─────────────┬─────────────────┐
 │  TEST SET  │         TEST CASE         │    PERCENTAGE , %    │       BLOCKED       │       BYPASSED       │     UNRESOLVED     │    SENT     │     FAILED      │
@@ -275,88 +272,83 @@ and GoTestWAF evaluating ModSecurity on Docker.
 
 To run the demo environment:
 
-1.  Clone this repository and go to the cloned directory:
+1. Clone this repository and go to the cloned directory:
 
-    ```sh
-    git clone https://github.com/wallarm/gotestwaf.git
-    cd gotestwaf
-    ```
+   ```sh
+   git clone https://github.com/wallarm/gotestwaf.git
+   cd gotestwaf
+   ```
+2. Start ModSecurity from the [Docker image](https://hub.docker.com/r/owasp/modsecurity-crs/) by using the following `make` command:
 
-2.  Start ModSecurity from the [Docker image](https://hub.docker.com/r/owasp/modsecurity-crs/) by using the following `make` command:
+   ```sh
+   make modsec
+   ```
 
-    ```sh
-    make modsec
-    ```
+   Settings for running the ModSecurity Docker container are defined in the rule `modsec` of the cloned Makefile. It runs the ModSecurity Docker container on port 8080 with minimal configuration defined in the cloned file `./resources/default.conf.template` and the `PARANOIA` value set to 1.
 
-    Settings for running the ModSecurity Docker container are defined in the rule `modsec` of the cloned Makefile. It runs the ModSecurity Docker container on port 8080 with minimal configuration defined in the cloned file `./resources/default.conf.template` and the `PARANOIA` value set to 1.
+   If required, you can change these settings by editing the rule `modsec` in the cloned Makefile. Available options for ModSecurity configuration are described on [Docker Hub](https://hub.docker.com/r/owasp/modsecurity-crs/).
 
-    If required, you can change these settings by editing the rule `modsec` in the cloned Makefile. Available options for ModSecurity configuration are described on [Docker Hub](https://hub.docker.com/r/owasp/modsecurity-crs/).
+   To stop ModSecurity containers use the following command:
 
-    To stop ModSecurity containers use the following command:
+   ```sh
+   make modsec_down
+   ```
+3. Start GoTestWAF with minimal configuration by using one of the following methods:
 
-    ```sh
-    make modsec_down
-    ```
+   Start the [Docker image](https://hub.docker.com/r/wallarm/gotestwaf) by using the following `docker pull` and `docker run` commands:
 
-3.  Start GoTestWAF with minimal configuration by using one of the following methods:
+   ```sh
+   docker pull wallarm/gotestwaf
+   docker run --rm --network="host" -v ${PWD}/reports:/app/reports \
+       wallarm/gotestwaf --url=http://127.0.0.1:8080 --noEmailReport
+   ```
 
-    Start the [Docker image](https://hub.docker.com/r/wallarm/gotestwaf) by using the following `docker pull` and `docker run` commands:
+   Build the GoTestWAF Docker image from the [Dockerfile](./Dockerfile) and run the
+   image by using the following `make` commands (make sure ModSec is running on port 8080; if not, update the port value in the Makefile):
 
-    ```sh
-    docker pull wallarm/gotestwaf
-    docker run --rm --network="host" -v ${PWD}/reports:/app/reports \
-        wallarm/gotestwaf --url=http://127.0.0.1:8080 --noEmailReport
-    ```
+   ```sh
+   make gotestwaf
+   make scan_local_from_docker
+   ```
 
-    Build the GoTestWAF Docker image from the [Dockerfile](./Dockerfile) and run the
-    image by using the following `make` commands (make sure ModSec is running on port 8080; if not, update the port value in the Makefile):
+   Start GoTestWAF natively with go by using the following `make` command:
+   (make sure ModSec is running on port 8080; if not, update the port value in the Makefile):
 
-    ```sh
-    make gotestwaf
-    make scan_local_from_docker
-    ```
-
-    Start GoTestWAF natively with go by using the following `make` command:
-    (make sure ModSec is running on port 8080; if not, update the port value in the Makefile):
-
-    ```sh
-    make scan_local
-    ```
-
-4.  Find the [report](#checking-the-evaluation-results) file `waf-evaluation-report-<date>.pdf` in
-the `reports` folder that you mapped to `/app/reports` inside the container.
+   ```sh
+   make scan_local
+   ```
+4. Find the [report](#checking-the-evaluation-results) file `waf-evaluation-report-<date>.pdf` in
+   the `reports` folder that you mapped to `/app/reports` inside the container.
 
 ## Other options to run GoTestWAF
 
 In addition to running the GoTestWAF Docker image downloaded from Docker Hub, you can run GoTestWAF by using the following options:
 
-*   Clone this repository and build the GoTestWAF Docker image from the [Dockerfile](./Dockerfile), for example:
+* Clone this repository and build the GoTestWAF Docker image from the [Dockerfile](./Dockerfile), for example:
 
-    ```sh
-    git clone https://github.com/wallarm/gotestwaf.git
-    cd gotestwaf
-    DOCKER_BUILDKIT=1 docker build --force-rm -t gotestwaf .
-    docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
-        gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL>
-    ```
+  ```sh
+  git clone https://github.com/wallarm/gotestwaf.git
+  cd gotestwaf
+  DOCKER_BUILDKIT=1 docker build --force-rm -t gotestwaf .
+  docker run --rm --network="host" -it -v ${PWD}/reports:/app/reports \
+      gotestwaf --url=<EVALUATED_SECURITY_SOLUTION_URL>
+  ```
 
-    If the evaluated security tool is available externally, you can skip the option `--network="host"`. This option enables interaction of Docker containers running on 127.0.0.1.
-
+  If the evaluated security tool is available externally, you can skip the option `--network="host"`. This option enables interaction of Docker containers running on 127.0.0.1.
 * Clone this repository and run GoTestWAF with [`go`](https://golang.org/doc/), for example:
 
-    ```sh
-    git clone https://github.com/wallarm/gotestwaf.git
-    cd gotestwaf
-    go run ./cmd --url=<EVALUATED_SECURITY_SOLUTION_URL>
-    ```
+  ```sh
+  git clone https://github.com/wallarm/gotestwaf.git
+  cd gotestwaf
+  go run ./cmd --url=<EVALUATED_SECURITY_SOLUTION_URL>
+  ```
+* Clone this repository and build GoTestWAF as the Go module:
 
-*   Clone this repository and build GoTestWAF as the Go module:
-
-    ```sh
-    git clone https://github.com/wallarm/gotestwaf.git
-    cd gotestwaf
-    go build -mod vendor -o gotestwaf ./cmd
-    ```
+  ```sh
+  git clone https://github.com/wallarm/gotestwaf.git
+  cd gotestwaf
+  go build -mod vendor -o gotestwaf ./cmd
+  ```
 
 Supported GoTestWAF configuration options are described below.
 
@@ -412,7 +404,6 @@ Options:
 
 GoTestWAF supports two HTTP clients for performing requests, selectable via the `--httpClient` option. The default client is the standard Golang HTTP client. The second option is Chrome, which can be used with the `--httpClient=chrome` CLI argument. Note that on Linux systems, you must add the `--cap-add=SYS_ADMIN` argument to the Docker arguments to run GoTestWAF with Chrome as the request performer.
 
-
 ### Scan based on OpenAPI file
 
 For better scanning, GTW supports sending malicious vectors through valid application requests. Instead of constructing requests that are simple in structure and send them to the URL specified at startup, GoTestWAF creates valid requests based on the application's API description in the OpenAPI 3.0 format.
@@ -420,30 +411,22 @@ For better scanning, GTW supports sending malicious vectors through valid applic
 How it works:
 
 1. GoTestWAF loads an OpenAPI file and constructs request templates. All templates are then divided into groups based on what placeholders they support (e.g., if there is a string parameter in the request path, then such a request will be assigned to a group of requests that support URLPath placeholder)
-
 2. The next malicious vector is selected from the queue for sending. Based on the placeholder specified for it, all query templates are selected into which this vector can be substituted. Next, the vector is substituted into template and the request is sent.
-
 3. Based on the possible responses specified in the OpenAPI file, it is determined whether the request was blocked by WAF or passed to the application. If the status of the response code and its scheme match those described in the OpenAPI file, the request is marked as bypassed. Otherwise, it will be marked as blocked. It is possible that the application only responds with a status code, and this status code matches the response from the WAF. In this case, the request will be marked as unresolved.
 
 Some supported OpenAPI features:
 
 * numeric and string parameters in headers, paths, query parameters and body of requests;
-
 * the following content-types are supported for the request body: `application/json`, `application/xml`, `application/x-www-form-urlencoded`, `text/plain`;
-
 * the following modifiers are supported for XML: `name`, `wrapped`, `attribute`, `prefix`, `namespace`;
-
 * length limits for strings are supported through the `minLength` and `maxLength` parameters;
-
 * value restrictions for numbers are supported through `minimum`, `maximum`, `exclusiveMinimum` and `exclusiveMaximum`;
-
 * restrictions on the length of arrays through `minItems` and `maxItems` are supported;
-
 * combination of schemes via `oneOf`, `anyOf`, `allOf` is supported.
 
 Based on the described principle of operation, it is extremely important that the OpenAPI file correctly represents the implemented application API. Therefore, for example, you cannot use `default` to describe possible responses to queries.
 
-Note: You need to forward volume with openapi spec to GoTestWAF container. 
+Note: You need to forward volume with openapi spec to GoTestWAF container.
 
 ```sh
 -v ${PWD}/api.yaml:/app/api.yaml
